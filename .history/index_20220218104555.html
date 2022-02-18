@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MineSweeper</title>
+</head>
+
+<body>
+  <div class="level_select">
+    <span onclick="changeLevel('primary')">初级</span>
+    <span onclick="changeLevel('intermediate')">中级</span>
+    <span onclick="changeLevel('advanced')">高级</span>
+  </div>
+  <div class="game_wrap">
+    <div class="header_wrap">
+      <canvas id="mineNumCanvas" width="39" height="23"></canvas>
+      <div class="face_btn"></div>
+      <canvas id="timeCanvas" width="39" height="23"></canvas>
+    </div>
+    <div class="section_wrap">
+      <canvas id="canvas" width="180" height="180"></canvas>
+    </div>
+  </div>
+  <script>
+    /** @type {HTMLCanvasElement} */
+    const canvasNode = document.getElementById('canvas')
+    const ctx = canvasNode.getContext('2d')
+    // 存储图片路径（name, url）
+    const imgArr = new Map();
+    // 存储已加载好的图片 (name, img)
+    const imgArrElement = new Map();
+    // 资源是否加载完成
+    const sourceInit = false;
+    const MAP_LEVEL = {
+      'primary': {
+        mapSize: [9, 9],
+        mineNum: 10
+      },
+      'intermediate': {
+        mapSize: [16, 16],
+        mineNum: 40
+      },
+      'advanced': {
+        mapSize: [16, 30],
+        mineNum: 90
+      }
+    }
+
+    function initImage() {
+      imgArr.set('ask', './img/ask.gif')
+      imgArr.set('blank', './img/blank.gif')
+      imgArr.set('blood', './img/blood.gif')
+      imgArr.set('flag', './img/flag.gif')
+      imgArr.set('mine', './img/mine.gif')
+      for (let i = 0; i <= 8; i++) {
+        imgArr.set(i, './img/' + i + '.gif')
+      }
+      const loadImage = (url) => {
+        return new Promise((reslove) => {
+          let img = new Image();
+          img.onload = () => reslove(img)
+          img.src = url
+        })
+      }
+      const promiseArr = [];
+      // 获取所有图片的promise对象并使用promise.all进行加载
+      [...imgArr.keys()].forEach(e => {
+        promiseArr.push(loadImage(imgArr.get(e)))
+      });
+      sourceInit = true;
+      return Promise.all(promiseArr)
+    }
+
+    // 开始游戏
+    async function startGame() {
+      if (!sourceInit) {
+        const res = await initImage()
+        const keys = [...imgArr.keys()];
+        res.forEach((item, index) => {
+          imgArrElement.set(String(keys[index]), item)
+        })
+      }
+      initGame();
+    }
+
+    class MineSweeper {
+      constructor() {
+        this.level = 'primary'
+        this.map = [];
+        this.mapSizeX = 0;
+        this.mapSizeY = 0;
+        this.mineNum = 0;
+        this.bombList = [];
+        this.flagList = [];
+        this.problemList = [];
+        this.isGameOver = false;
+      }
+
+      initGame() {
+        const {
+          mapSize,
+          mineNum
+        } = MAP_LEVEL[this.level]
+        this.mapSizeX = mapSize[0];
+        this.mapSizeY = mapSize[1];
+        this.mineNum = mineNum;
+        (function buildMap() {
+          for (let i = 0; i < this.mapSizeY; i++) {
+            this.map.push(new Array(this.mapSizeX).fill(-1))
+          }
+        })()
+        (function buildBomb() {
+          let curBomb = 0;
+          while (curBomb < this.mineNum) {
+            let xPos = Number.parseInt(Math.random() * count);
+            let yPos = Number.parseInt(Math.random() * count);
+            if (bombList.find(item => {
+                return xPos === item[0] && yPos === item[1]
+              }) === undefined) {
+              this.bombList.push([xPos, yPos])
+              curBomb++;
+            }
+          }
+        })()
+        this.drawMap()
+      }
+
+      // 绘制
+      drawMap() {
+        const blankImg = imgArrElement.get('blank')
+        const numImg = imgArrElement.get(this.map[i][j] + '')
+        const flag = imgArrElement.get('flag')
+
+        for (let i = 0; i < this.mapSizeX; i++) {
+          for (let j = 0; j < this.mapSizeY; j++) {
+            if (this.map[i][j] === -1) {
+              ctx.drawImage(blankImg, 0, 0, blankImg.width, blankImg.height, 20 * i, 20 * j, 20, 20)
+            } else if (this.map[i][j] >= 0) {
+              ctx.drawImage(numImg, 0, 0, numImg.width, numImg.height, 20 * i, 20 * j, 20, 20)
+            }
+            if (this.posInflagList(i, j) !== -1) {
+              ctx.drawImage(flag, 0, 0, flag.width, flag.height, 20 * i, 20 * j, 20, 20)
+            }
+          }
+        }
+      }
+
+      drawAllBomb(xPos, yPos) {
+        const blood = imgArrElement.get('blood')
+        const mine = imgArrElement.get('mine')
+
+        // 绘制所有地雷
+        this.bombList.forEach(e => {
+          if (e[0] === xPos && e[1] === yPos) {
+            ctx.drawImage(blood, 0, 0, blood.width, blood.height, 20 * e[0], 20 * e[1], 20, 20)
+          } else {
+            ctx.drawImage(mine, 0, 0, mine.width, mine.height, 20 * e[0], 20 * e[1], 20, 20)
+          }
+        })
+      }
+
+      // 获取(xPos, yPos)周围八格位置
+      getAroundGrid(xPos, yPos) {
+        const pos = [-1, 0, 1];
+        const around = [];
+        for (let i = 0; i < pos.length; i++) {
+          let tmpxPos = xPos + pos[i];
+          // 边界
+          if (tmpxPos < 0 || tmpxPos >= this.mapSizeX) {
+            continue
+          }
+          for (let j = 0; j < pos.length; j++) {
+            let tmpyPos = yPos + pos[j];
+            if (tmpyPos < 0 || tmpyPos >= this.mapSizeY || (tmpxPos === xPos && tmpyPos === yPos)) {
+              continue
+            }
+            around.push([tmpxPos, tmpyPos])
+          }
+        }
+        return around;
+      }
+
+      // 点击(xPos, yPos)操作
+      clickPos(xPos, yPos) {
+        const queue = []
+        queue.push([xPos, yPos]);
+        while (queue.length > 0) {
+          let tmpNode = queue.shift()
+          let tmpxPos = tmpNode[0],
+            tmpyPos = tmpNode[1]
+          // 该点为雷或已经打开则跳过
+          if (posInBombList(tmpxPos, tmpyPos) || map[tmpxPos][tmpyPos] >= 0) {
+            continue;
+          }
+          const around = getAroundGrid(tmpxPos, tmpyPos, map.length)
+          // around中有多少元素在bombList中
+          let bombNum = 0
+          around.forEach(x => {
+            bombList.forEach(y => {
+              if (x[0] === y[0] && x[1] === y[1]) {
+                bombNum++;
+              }
+            })
+          })
+          map[tmpxPos][tmpyPos] = bombNum
+          // 如果周围没有雷，则继续打开周围坐标
+          if (bombNum === 0) {
+            queue.push(...around)
+          }
+        }
+        drawMap()
+        // 判断游戏是否结束
+        if (posInBombList(xPos, yPos)) {
+          drawMineList(xPos, yPos)
+          alert('you lose!');
+          // initGame()
+          return;
+        }
+      }
+
+    }
+
+
+
+
+
+    // (xPos, yPos)是否为雷
+    function posInBombList(xPos, yPos) {
+      // true: 存在
+      return bombList.find(item => {
+        return xPos === item[0] && yPos === item[1]
+      }) !== undefined
+    }
+
+    // (xPos, yPos)是否被标记
+    function posInflagList(xPos, yPos) {
+      return flagList.findIndex(item => {
+        return xPos === item[0] && yPos === item[1]
+      })
+    }
+
+    // 判断游戏是否胜利
+    function checkGameWin() {
+      let winFlag = true;
+      // 剩余未打开格子都存在于bombList中
+      for (let i = 0; i < map.length; i++) {
+        for (let j = 0; j < map[0].length; j++) {
+          let tmpGrid = map[i][j]
+          if (tmpGrid < 0 && !posInBombList(i, j)) {
+            winFlag = false;
+            return winFlag;
+          }
+        }
+      }
+      return winFlag;
+    }
+
+    // 标记(xPos, yPos)
+    function signBomb(xPos, yPos) {
+      const pos = posInflagList(xPos, yPos)
+      if (pos !== -1) {
+        flagList.splice(pos, 1)
+      } else {
+        flagList.push([xPos, yPos])
+      }
+      drawMap()
+    }
+
+    // 绘制所有地雷
+    function drawMineList(xPos, yPos) {
+      bombList.forEach(e => {
+        if (e[0] === xPos && e[1] === yPos) {
+          const blood = imgArrElement.get('blood')
+          ctx.drawImage(blood, 0, 0, blood.width, blood.height, 20 * e[0], 20 * e[1], 20, 20)
+        } else {
+          const mine = imgArrElement.get('mine')
+          ctx.drawImage(mine, 0, 0, mine.width, mine.height, 20 * e[0], 20 * e[1], 20, 20)
+        }
+      })
+    }
+
+    // 监听点击事件
+    document.addEventListener('click', e => {
+      if (e.target !== canvas) {
+        return;
+      }
+      clickPos(Number.parseInt(e.offsetX / 20), Number.parseInt(e.offsetY / 20))
+    })
+
+    // 监听右键事件
+    document.oncontextmenu = e => {
+      if (e.target === canvas) {
+        const xPos = Number.parseInt(Number.parseInt(e.offsetX / 20)),
+          yPos = Number.parseInt(Number.parseInt(e.offsetY / 20))
+        signBomb(xPos, yPos)
+      }
+      return false;
+    };
+
+
+    startGame();
+    // 改变等级
+    function changeLevel(level) {
+
+    }
+  </script>
+</body>
+
+</html>

@@ -9,13 +9,12 @@
 </head>
 
 <body>
-
-  <div id="game_wrap" class="game_wrap">
-    <div class="level_select">
-      <span class="level" onclick="changeLevel('primary')">初级</span>
-      <span class="level" onclick="changeLevel('intermediate')">中级</span>
-      <span class="level" onclick="changeLevel('advanced')">高级</span>
-    </div>
+  <div class="level_select">
+    <span class="level" onclick="changeLevel('primary')">初级</span>
+    <span class="level" onclick="changeLevel('intermediate')">中级</span>
+    <span class="level" onclick="changeLevel('advanced')">高级</span>
+  </div>
+  <div class="game_wrap">
     <div class="header_wrap">
       <canvas id="mineNumCanvas" width="39" height="23" style="border: 1px solid red;"></canvas>
       <div class="face_btn" onclick="restartGame()">
@@ -23,47 +22,33 @@
       </div>
       <canvas id="timeCanvas" width="39" height="23"></canvas>
     </div>
-    <div class="section_wrap" id="section_wrap">
+    <div class="section_wrap">
       <canvas id="canvas" width="180" height="180"></canvas>
     </div>
   </div>
   <style>
-    #game_wrap {
-      width: 180px;
-    }
-    .game_wrap{
-      border: 2px solid gray;
-    }
     .level_select {
-      width: 100%;
+      width: 180px;
       display: flex;
-      border-bottom: 2px solid gray;
-      padding: 5px 0;
     }
 
     .level {
-      flex: 10;
+      flex: 1;
       text-align: center;
     }
 
     .header_wrap {
-      width: 100%;
+      width: 180px;
       height: 23px;
       display: flex;
-      border-bottom: 2px solid gray;
-      padding: 5px 0;
     }
 
-    .section_wrap{
-      width: 100%;
-      height: 180px;
-    }
     #mineNumCanvas {
       flex: 1;
     }
 
     .face_btn {
-      flex: 10;
+      flex: 3;
       text-align: center;
     }
 
@@ -103,7 +88,7 @@
       },
       'advanced': {
         mapSize: [16, 30],
-        mineNum: 99
+        mineNum: 90
       }
     }
 
@@ -172,13 +157,9 @@
         } = MAP_LEVEL[this.level]
         this.mapSizeX = mapSize[0];
         this.mapSizeY = mapSize[1];
-        canvasNode.width = this.mapSizeX * 20;
-        canvasNode.height = this.mapSizeY * 20;
-        const gameWrapNode = document.getElementById('game_wrap');
-        gameWrapNode.setAttribute('style', `width: ${this.mapSizeX * 20}px;`);
-        const sectionWrapNode = document.getElementById('section_wrap');
-        sectionWrapNode.setAttribute('style', `height: ${this.mapSizeY * 20}px;`);
-        console.log(gameWrapNode);
+        ctx.width = this.mapSizeX * 20;
+        ctx.height = this.mapSizeY * 20;
+        console.log(ctx);
         this.mineNum = mineNum;
         this.buildMap();
         this.buildBomb();
@@ -188,23 +169,23 @@
         this.timer = setInterval(() => {
           this.time += 1;
           this.drawGameInfo(this.time, this.timerCanvas)
-          if (this.time >= 999) {
+          if(this.time >= 999){
             this.time = 0;
           }
         }, 1000)
       }
 
       buildMap() {
-        for (let i = 0; i < this.mapSizeX; i++) {
-          this.map.push(new Array(this.mapSizeY).fill(-1))
+        for (let i = 0; i < this.mapSizeY; i++) {
+          this.map.push(new Array(this.mapSizeX).fill(-1))
         }
       }
 
       buildBomb() {
         let curBomb = 0;
         while (curBomb < this.mineNum) {
-          let xPos = Number.parseInt(Math.random() * this.mapSizeX);
-          let yPos = Number.parseInt(Math.random() * this.mapSizeY);
+          let xPos = Number.parseInt(Math.random() * this.mineNum);
+          let yPos = Number.parseInt(Math.random() * this.mineNum);
           if (this.bombList.find(item => {
               return xPos === item[0] && yPos === item[1]
             }) === undefined) {
@@ -217,6 +198,7 @@
       drawMap() {
         const blankImg = imgArrElement.get('blank')
         const flag = imgArrElement.get('flag')
+
         for (let i = 0; i < this.mapSizeX; i++) {
           for (let j = 0; j < this.mapSizeY; j++) {
             if (this.map[i][j] === -1) {

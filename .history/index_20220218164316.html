@@ -176,8 +176,6 @@
         canvasNode.height = this.mapSizeY * 20;
         const gameWrapNode = document.getElementById('game_wrap');
         gameWrapNode.setAttribute('style', `width: ${this.mapSizeX * 20}px;`);
-        const sectionWrapNode = document.getElementById('section_wrap');
-        sectionWrapNode.setAttribute('style', `height: ${this.mapSizeY * 20}px;`);
         console.log(gameWrapNode);
         this.mineNum = mineNum;
         this.buildMap();
